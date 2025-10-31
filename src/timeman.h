@@ -1,0 +1,1 @@
+Timer manage(int time_, Board &board, int inc, int movestogo);

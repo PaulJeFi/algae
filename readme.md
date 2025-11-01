@@ -15,6 +15,7 @@ Algae is a UCI chess engine written in C++.
     - [Center control](https://www.chessprogramming.org/Center_Control) : [Pawn center](https://www.chessprogramming.org/Pawn_Center)
     - [Unadvanced central pawns](https://www.chessprogramming.org/Development#Eval_Considerations)
     - [Rook on open and semi-open files](https://www.chessprogramming.org/Rook_on_Open_File)
+    - [Bishop Pair](https://www.chessprogramming.org/Bishop_Pair)
 - [Search](https://www.chessprogramming.org/Search)
     - [PVS](https://www.chessprogramming.org/Principal_Variation_Search)
     - [TT](https://www.chessprogramming.org/Transposition_Table)

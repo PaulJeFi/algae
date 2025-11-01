@@ -210,6 +210,13 @@ int evaluate(Board &board) {
         bitboard = remove_square(bitboard, square);
     }
 
+    // Bishop pair
+    if (popcount(board.bitboards[WBISHOP]) >= 2) {
+        score += 20;
+    } if (popcount(board.bitboards[BBISHOP]) >= 2) {
+        score -= 20;
+    }
+
     // General positional eval
 
     // Minor pieces developed

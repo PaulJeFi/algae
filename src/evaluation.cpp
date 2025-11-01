@@ -212,9 +212,9 @@ int evaluate(Board &board) {
 
     // Bishop pair
     if (popcount(board.bitboards[WBISHOP]) >= 2) {
-        score += 20;
+        score += 50;
     } if (popcount(board.bitboards[BBISHOP]) >= 2) {
-        score -= 20;
+        score -= 50;
     }
 
     // General positional eval

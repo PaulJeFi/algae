@@ -3,32 +3,7 @@
 #include "board.h"
 #include "evaluation.h"
 
-int mop_up(Board &board) {
-    
-    int material[2] = {0, 0}; // material score for [WHITE, BLACK]
-    int value = 0;
-    U64 bitboard = board.occupancy[BOTH];
-    uint8_t square = no_sq;
-
-    while (bitboard) {
-
-        square = ls1b_index(bitboard);
-        value = mop_up_values[board.board[square]];
-        if (value > 0) {
-            material[0] += value;
-        } else {
-            material[1] += value;
-        }
-        bitboard = remove_square(bitboard, square);
-    }
-
-    if (material[0] == material[1]) {
-            return 0;
-    }
-    int8_t winner = 1;
-    if (material[0] < material[1]) {
-        winner = -1;
-    }
+static inline int mop_up(Board &board, int winner) {
 
     uint8_t wk = ls1b_index(board.bitboards[WKING]);
     uint8_t bk = ls1b_index(board.bitboards[BKING]);
@@ -39,15 +14,16 @@ int mop_up(Board &board) {
 
 int evaluate(Board &board) {
 
-    // TODO : bishop and queen mobility, king safety, bishop pair
+    // TODO : bishop and queen mobility, king safety
 
     int8_t s2m = board.side == WHITE ? 1 : -1;
 
     int score = 0;
     int phase = 24;
-    int EG = mop_up(board);
+    int EG = 0;
     int MG = 0;
     int file_;
+    int mop_up_mat = 0;
     uint8_t square = no_sq;
     int8_t piece;
 
@@ -63,6 +39,7 @@ int evaluate(Board &board) {
             EG += PST_EG[WPAWN][flip[square]];
             MG += PST_MG[WPAWN][flip[square]];
             phase -= PHASE_VALUES[WPAWN];
+            mop_up_mat += mop_up_values[WPAWN];
 
             file_ = square_file(square);
 
@@ -86,6 +63,7 @@ int evaluate(Board &board) {
             EG += PST_EG[WKNIGHT][flip[square]];
             MG += PST_MG[WKNIGHT][flip[square]];
             phase -= PHASE_VALUES[WKNIGHT];
+            mop_up_mat += mop_up_values[WKNIGHT];
 
         } else if (piece == WBISHOP) {
             
@@ -94,6 +72,7 @@ int evaluate(Board &board) {
             EG += PST_EG[WBISHOP][flip[square]];
             MG += PST_MG[WBISHOP][flip[square]];
             phase -= PHASE_VALUES[WBISHOP];
+            mop_up_mat += mop_up_values[WBISHOP];
 
         } else if (piece == WROOK) {
             
@@ -102,6 +81,7 @@ int evaluate(Board &board) {
             EG += PST_EG[WROOK][flip[square]];
             MG += PST_MG[WROOK][flip[square]];
             phase -= PHASE_VALUES[WROOK];
+            mop_up_mat += mop_up_values[WROOK];
 
             file_ = square_file(square);
                     
@@ -122,6 +102,7 @@ int evaluate(Board &board) {
             EG += PST_EG[WQUEEN][flip[square]];
             MG += PST_MG[WQUEEN][flip[square]];
             phase -= PHASE_VALUES[WQUEEN];
+            mop_up_mat += mop_up_values[WQUEEN];
 
         } else if (piece == WKING) {
             
@@ -130,6 +111,7 @@ int evaluate(Board &board) {
             EG += PST_EG[WKING][flip[square]];
             MG += PST_MG[WKING][flip[square]];
             phase -= PHASE_VALUES[WKING];
+            mop_up_mat += mop_up_values[WKING];
 
         } else if (piece == BPAWN) {
             
@@ -138,6 +120,7 @@ int evaluate(Board &board) {
             EG -= PST_EG[WPAWN][square];
             MG -= PST_MG[WPAWN][square];
             phase -= PHASE_VALUES[WPAWN];
+            mop_up_mat -= mop_up_values[BPAWN];
 
             file_ = square_file(square);
 
@@ -160,6 +143,7 @@ int evaluate(Board &board) {
             EG -= PST_EG[WKNIGHT][square];
             MG -= PST_MG[WKNIGHT][square];
             phase -= PHASE_VALUES[WKNIGHT];
+            mop_up_mat -= mop_up_values[BKNIGHT];
 
         } else if (piece == BBISHOP) {
             
@@ -168,6 +152,7 @@ int evaluate(Board &board) {
             EG -= PST_EG[WBISHOP][square];
             MG -= PST_MG[WBISHOP][square];
             phase -= PHASE_VALUES[WBISHOP];
+            mop_up_mat -= mop_up_values[BBISHOP];
             
         } else if (piece == BROOK) {
             
@@ -176,6 +161,7 @@ int evaluate(Board &board) {
             EG -= PST_EG[WROOK][square];
             MG -= PST_MG[WROOK][square];
             phase -= PHASE_VALUES[WROOK];
+            mop_up_mat -= mop_up_values[BROOK];
 
             file_ = square_file(square);
                     
@@ -196,6 +182,7 @@ int evaluate(Board &board) {
             EG -= PST_EG[WQUEEN][square];
             MG -= PST_MG[WQUEEN][square];
             phase -= PHASE_VALUES[WQUEEN];
+            mop_up_mat -= mop_up_values[BQUEEN];
 
         } else if (piece == BKING) {
             
@@ -204,6 +191,7 @@ int evaluate(Board &board) {
             EG -= PST_EG[WKING][square];
             MG -= PST_MG[WKING][square];
             phase -= PHASE_VALUES[WKING];
+            mop_up_mat -= mop_up_values[BKING];
 
         }
 
@@ -215,6 +203,13 @@ int evaluate(Board &board) {
         score += 50;
     } if (popcount(board.bitboards[BBISHOP]) >= 2) {
         score -= 50;
+    }
+
+    // Endgame eval
+    if (mop_up_mat > 0) {
+        EG += mop_up(board, 1);
+    } else if (mop_up_mat < 0) {
+        EG += mop_up(board, -1);
     }
 
     // General positional eval

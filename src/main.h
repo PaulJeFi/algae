@@ -121,7 +121,6 @@ enum PIECES {
 const string pieces_char = "PNBRQKpnbrqk";
 const string STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-const int mop_up_values[12] = {100, 300, 300, 500, 900, 0, -100, -300, -300, -500, -900, -0};
 const uint8_t CMD[64] = {
     6,  5,  4,  3,  3,  4,  5,  6,
     5,  4,  3,  2,  2,  3,  4,  5,

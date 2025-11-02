@@ -1,4 +1,3 @@
-int mop_up(Board &board);
 int evaluate(Board &board);
 
 const int flip[64] = {
@@ -141,3 +140,4 @@ const int PST_EG[6][64] = {
 const int EG_VALUES[6] = {92, 337, 365, 477, 1025, 0};
 const int MG_VALUES[6] = {94, 281, 297, 512, 936,  0};
 const int PHASE_VALUES[6] = {0, 1, 1, 2, 4, 0};
+const int mop_up_values[12] = {100, 300, 300, 500, 900, 0, -100, -300, -300, -500, -900, -0};

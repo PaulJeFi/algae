@@ -86,7 +86,7 @@ int evaluate(Board &board) {
             file_ = square_file(square);
                     
             // open-files
-            if (((board.bitboards[WPAWN] || board.bitboards[BPAWN]) & FILES[file_]) == 0) {
+            if (((board.bitboards[WPAWN] | board.bitboards[BPAWN]) & FILES[file_]) == 0) {
                 score += 15;
             }
             
@@ -166,7 +166,7 @@ int evaluate(Board &board) {
             file_ = square_file(square);
                     
             // open-files
-            if (((board.bitboards[WPAWN] || board.bitboards[BPAWN]) & FILES[file_]) == 0) {
+            if (((board.bitboards[WPAWN] | board.bitboards[BPAWN]) & FILES[file_]) == 0) {
                 score -= 15;
             }
             

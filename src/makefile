@@ -1,6 +1,6 @@
 # Compiler and base flags
 CXX := g++
-CXXFLAGS := -O3 -std=c++17 -Wall -Wextra
+CXXFLAGS := -O3 -std=c++17 -ffast-math
 
 # Source files
 SOURCES := main.cpp board.cpp sliding_movegen.cpp tt.cpp search.cpp evaluation.cpp ordering.cpp uci.cpp timeman.cpp
@@ -33,15 +33,15 @@ endif
 
 # BMI2 optimized version
 bmi2:
-	$(CXX) $(CXXFLAGS) -mbmi2 -DUSE_BMI2_FORCE --std=c++17 -o $(TARGET_BMI2) $(SOURCES)
+	$(CXX) $(CXXFLAGS) -mbmi2 -DUSE_BMI2_FORCE -o $(TARGET_BMI2) $(SOURCES)
 
 # Compatibility version
 compat:
-	$(CXX) $(CXXFLAGS) --std=c++17 -o $(TARGET_COMPAT) $(SOURCES)
+	$(CXX) $(CXXFLAGS) -o $(TARGET_COMPAT) $(SOURCES)
 
 # Build both versions
 both:
-	$(CXX) $(CXXFLAGS) -mbmi2 -DUSE_BMI2_FORCE --std=c++17 -o $(TARGET_BMI2) $(SOURCES)
+	$(CXX) $(CXXFLAGS) -mbmi2 -DUSE_BMI2_FORCE -o $(TARGET_BMI2) $(SOURCES)
 	$(CXX) $(CXXFLAGS) -o $(TARGET_COMPAT) $(SOURCES)
 
 clean:

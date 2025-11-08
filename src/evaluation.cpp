@@ -38,8 +38,6 @@ int evaluate(Board &board) {
             MG += MG_VALUES[WPAWN];
             EG += PST_EG[WPAWN][flip[square]];
             MG += PST_MG[WPAWN][flip[square]];
-            phase -= PHASE_VALUES[WPAWN];
-            mop_up_mat += mop_up_values[WPAWN];
 
             file_ = square_file(square);
 
@@ -119,8 +117,6 @@ int evaluate(Board &board) {
             MG -= MG_VALUES[WPAWN];
             EG -= PST_EG[WPAWN][square];
             MG -= PST_MG[WPAWN][square];
-            phase -= PHASE_VALUES[WPAWN];
-            mop_up_mat -= mop_up_values[BPAWN];
 
             file_ = square_file(square);
 

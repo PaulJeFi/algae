@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include "main.h"
 #include "attacks.h"
 #include "sliding_movegen.h"
@@ -148,8 +149,8 @@ U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask) {
     U64 random_U64() {
         // code by Tord Romstad
         U64 u1, u2, u3, u4;
-        u1 = (U64)(random()) & 0xFFFF; u2 = (U64)(random()) & 0xFFFF;
-        u3 = (U64)(random()) & 0xFFFF; u4 = (U64)(random()) & 0xFFFF;
+        u1 = (U64)(rand()) & 0xFFFF; u2 = (U64)(rand()) & 0xFFFF;
+        u3 = (U64)(rand()) & 0xFFFF; u4 = (U64)(rand()) & 0xFFFF;
         return u1 | (u2 << 16) | (u3 << 32) | (u4 << 48);
     }
 

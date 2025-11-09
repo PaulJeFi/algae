@@ -14,6 +14,7 @@ using namespace std;
 using std::string;
 
 #define U64 unsigned long long
+typedef unsigned int uint;
 
 const int8_t None = -1;
 

@@ -3,7 +3,7 @@
 #include "board.h"
 #include "tt.h"
 
-Entry::Entry(U64 key, int depth, int value, int8_t flag, Move move) {
+Entry::Entry(U64 key, int depth, int value, int8_t flag, const Move &move) {
         this->key = key;
         this->depth = depth;
         this->value = value;
@@ -11,9 +11,9 @@ Entry::Entry(U64 key, int depth, int value, int8_t flag, Move move) {
         this->move = move;
 }
 
-ProbeEntry::ProbeEntry(Move move, double value) {
-        this->move = move;
-        this->value = value;
+ProbeEntry::ProbeEntry(const Move &move, double value) {
+    this->move = move;
+    this->value = value;
 }
 
 bool ProbeEntry::is_none() {
@@ -81,7 +81,7 @@ ProbeEntry TT::probe(const Board &board, uint depth, int alpha, int beta, uint p
     return ProbeEntry();
 }
 
-void TT::save(const Board &board, uint depth, int8_t flag, int value, uint ply, Move move, bool timeout) {
+void TT::save(const Board &board, uint depth, int8_t flag, int value, uint ply, const Move &move, bool timeout) {
 
     if (timeout) {
         return;

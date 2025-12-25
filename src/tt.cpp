@@ -13,8 +13,8 @@ Entry::Entry(U64 key, int depth, int value, int8_t flag, Move move) {
 
 ProbeEntry::ProbeEntry(Move move, double value) {
         this->move = move;
-        this-> value = value;
-    }
+        this->value = value;
+}
 
 bool ProbeEntry::is_none() {
     if ((move == nullmove) && (value == 0.5)) {
@@ -57,9 +57,9 @@ int TT::score_from_tt(int score, uint ply, int rule50) {
     return score;
 }
 
-ProbeEntry TT::probe(Board &board, uint depth, int alpha, int beta, uint ply) {
+ProbeEntry TT::probe(const Board &board, uint depth, int alpha, int beta, uint ply) {
 
-    Entry entry = tt[board.hash_key & (size-1)];
+    Entry &entry = tt[board.hash_key & (size-1)];
     int value;
 
     if (board.hash_key == entry.key) {
@@ -81,18 +81,17 @@ ProbeEntry TT::probe(Board &board, uint depth, int alpha, int beta, uint ply) {
     return ProbeEntry();
 }
 
-void TT::save(Board &board, uint depth, int8_t flag, int value, uint ply, Move move, bool timeout) {
+void TT::save(const Board &board, uint depth, int8_t flag, int value, uint ply, Move move, bool timeout) {
 
     if (timeout) {
         return;
     }
 
-    Entry entry = tt[board.hash_key & (size-1)];
+    Entry &entry = tt[board.hash_key & (size-1)];
 
     if ((board.hash_key == entry.key) && (entry.depth > depth) && (ply != 0)) {
         if (entry.move == nullmove) {
             entry.move = move;
-            tt[board.hash_key & (size-1)] = entry;
         }
         return;
     }
@@ -104,7 +103,6 @@ void TT::save(Board &board, uint depth, int8_t flag, int value, uint ply, Move m
     entry.depth = depth;
     entry.value = score_to_tt(value, ply);
     entry.flag  = flag;
-    tt[board.hash_key & (size-1)] = entry;
 }
 
 int TT::hashfull() {

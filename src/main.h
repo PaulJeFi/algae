@@ -47,7 +47,7 @@ static inline uint8_t ls1b_index(U64 b) {
     return b ? __builtin_ctzll(b) : -1;
 }
 
-static inline bool contains_square(U64 &bitboard, int square) {
+static inline bool contains_square(const U64 &bitboard, int square) {
     return (bitboard & (1ULL << square)) != 0;
 }
 
@@ -156,6 +156,7 @@ static inline int mated_in(int ply) {
 }
 
 const int MAX_HISTORY = 1000;
+const int MAX_MOVES = 256;
 
 const int MVV_LVA[12][12] = {
     // Victim     P    N    B    R    Q    K    P    N    B    R    Q    K  / Attacker

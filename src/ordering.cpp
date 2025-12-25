@@ -21,7 +21,7 @@ void reset_tables() {
     }
 }
 
-void update_killers(Move move, uint ply) {
+void update_killers(const Move &move, uint ply) {
     if (killers[ply][0] == move) {
         return;
     } if (killers[ply][1] == move) {
@@ -32,7 +32,7 @@ void update_killers(Move move, uint ply) {
     killers[ply][0] = move;
 }
 
-int score_move(Move move, Board &board, uint ply, Move &best_move) {
+int score_move(const Move &move, const Board &board, uint ply, const Move &best_move) {
 
     int score = 0;
 
@@ -58,12 +58,30 @@ int score_move(Move move, Board &board, uint ply, Move &best_move) {
     return score;
 }
 
-vector<Move> ordering(Board &board, uint ply, vector<Move> &moves, Move best_move) {
+void ordering(const Board &board, uint ply, vector<Move> &moves, const Move &best_move) {
 
-    sort(moves.begin(), moves.end(), 
-         [&](const Move& a, const Move& b) {
-             return score_move(a, board, ply, best_move) > 
-                    score_move(b, board, ply, best_move);
-         });
-    return moves;
+    // Precompute scores to avoid recalculating in comparator frequently
+    size_t n = moves.size();
+    if (n <= 1) {
+        return;
+    }
+    vector<int> scores;
+    scores.reserve(n);
+    for (size_t i = 0; i < n; ++i) {
+        scores.push_back(score_move(moves[i], board, ply, best_move));
+    }
+
+    // insertion sort
+    for (size_t i = 1; i < n; ++i) {
+        Move mv = moves[i];
+        int sc = scores[i];
+        size_t j = i;
+        while (j > 0 && scores[j-1] < sc) {
+            moves[j] = moves[j-1];
+            scores[j] = scores[j-1];
+            j--;
+        }
+        moves[j] = mv;
+        scores[j] = sc;
+    }
 }

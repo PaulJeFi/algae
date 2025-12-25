@@ -14,7 +14,7 @@ uint perft(Board &board, uint depth) {
         return 1;
     }
 
-    for (const Move move : board.generate_moves()) {
+    for (const Move &move : board.generate_moves()) {
         if (!board.make(move)) {
             continue;
         }
@@ -33,7 +33,7 @@ uint PERFT(Board &board, uint depth) {
         return 1;
     }
 
-    for (const Move move : board.generate_moves()) {
+    for (const Move &move : board.generate_moves()) {
         if (!board.make(move)) {
             continue;
         }
@@ -91,9 +91,10 @@ int Searcher::quiesce(int alpha, int beta) {
 
     int score = alpha - 1;
     ply++;
-    vector<Move> moves = board.generate_captures(); 
-    moves = ordering(board, ply, moves);
-    for (const Move move : moves) {
+    std::vector<Move> &moves = moves_by_depth[ply];
+    board.generate_captures(moves);
+    ordering(board, ply, moves);
+    for (const Move &move : moves) {
         if (!board.make(move)) {
             continue;
         }
@@ -218,9 +219,10 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
 
     uint legal = 0;
     ply++;
-    vector<Move> moves = board.generate_moves(); 
-    moves = ordering(board, ply, moves, bestmove);
-    for (const Move move : moves) {
+    std::vector<Move> &moves = moves_by_depth[ply];
+    board.generate_moves(moves);
+    ordering(board, ply, moves, bestmove);
+    for (const Move &move : moves) {
 
         // Late move reduction
         //* TODO : TEST
@@ -314,7 +316,7 @@ int Searcher::aspiration(int depth, int prev_eval) {
     return score;
 }
 
-void Searcher::iterative_deepening(Board board, int depth, Timer timer) {
+void Searcher::iterative_deepening(const Board &board, int depth, const Timer &timer) {
     vector<Move> moves = board.generate_legal_moves();
     Move bestmove = nullmove;
 

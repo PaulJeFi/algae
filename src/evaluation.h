@@ -1,4 +1,4 @@
-int evaluate(Board &board);
+int evaluate(const Board &board);
 
 const int flip[64] = {
     A8, B8, C8, D8, E8, F8, G8, H8,

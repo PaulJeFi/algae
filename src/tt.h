@@ -24,8 +24,8 @@ class TT {
         void clear();
         int score_to_tt(int score, uint ply);
         int score_from_tt(int score, uint ply, int rule50);
-        ProbeEntry probe(Board &board, uint depth, int alpha, int beta, uint ply);
-        void save(Board &board, uint depth, int8_t flag, int value, uint ply, Move move=nullmove, bool timeout=false);
+        ProbeEntry probe(const Board &board, uint depth, int alpha, int beta, uint ply);
+        void save(const Board &board, uint depth, int8_t flag, int value, uint ply, Move move=nullmove, bool timeout=false);
         int hashfull();
 };
 

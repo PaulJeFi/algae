@@ -3,7 +3,7 @@
 #include "board.h"
 #include "evaluation.h"
 
-static inline int mop_up(Board &board, int winner) {
+static inline int mop_up(const Board &board, int winner) {
 
     uint8_t wk = ls1b_index(board.bitboards[WKING]);
     uint8_t bk = ls1b_index(board.bitboards[BKING]);
@@ -12,7 +12,7 @@ static inline int mop_up(Board &board, int winner) {
 
 }
 
-int evaluate(Board &board) {
+int evaluate(const Board &board) {
 
     // TODO : bishop and queen mobility, king safety
 

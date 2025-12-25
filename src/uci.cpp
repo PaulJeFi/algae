@@ -18,7 +18,7 @@ void UCI() {
 
     reset_tables();
 
-    std::cout << "Algae 1.0 by Paul JF" << std::endl;
+    std::cout << "Algae 1.1 by Paul JF" << std::endl;
 
     while (std::getline(std::cin, command)) {
         std::istringstream is(command);
@@ -71,7 +71,7 @@ void UCI() {
 
         } else if (token == "uci") {
 
-            std::cout << "id name Algae 1.0" << std::endl;
+            std::cout << "id name Algae 1.1" << std::endl;
             std::cout << "id author Paul JF" << std::endl;
             std::cout << "uciok" << std::endl;
             continue;

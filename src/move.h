@@ -26,7 +26,7 @@ class Move {
             return move_str;
         }
 
-        bool operator==(const Move other) const {
+        bool operator==(const Move &other) const {
             return from_sq == other.from_sq &&
                    to_sq == other.to_sq &&
                    captured == other.captured &&

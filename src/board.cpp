@@ -48,6 +48,11 @@ Board::Board(string fen) : board{None} {
     castle = 0;
     hash_key = 0;
 
+    // Avoid frequent reallocations during search
+    state_history.reserve(MAX_PLY);
+    move_stack.reserve(MAX_PLY);
+    hash_history.reserve(MAX_PLY);
+
     vector<string> splitted_fen = split(fen);
     
     // Step 1 : initialize every flag that are not relative to piece positions
@@ -165,7 +170,7 @@ void Board::zobrist_key() {
 
 }
 
-bool Board::is_square_attacked(uint8_t square, uint8_t by_side) {
+bool Board::is_square_attacked(uint8_t square, uint8_t by_side) const {
 
     if ((by_side == WHITE) && (PAWN_ATTACKS[BLACK][square] & bitboards[WPAWN])) {
         return true;
@@ -183,9 +188,17 @@ bool Board::is_square_attacked(uint8_t square, uint8_t by_side) {
     return false;
 }
 
-vector<Move> Board::generate_moves() {
-
+vector<Move> Board::generate_moves() const {
     vector<Move> movelist;
+    generate_moves(movelist);
+    return movelist;
+}
+
+void Board::generate_moves(vector<Move> &movelist) const {
+
+    movelist.clear();
+    movelist.reserve(MAX_MOVES);
+
     U64 bitboard;
     U64 attacks;
     uint8_t from_square;
@@ -433,15 +446,15 @@ vector<Move> Board::generate_moves() {
             }
         }
     }
-
-    return movelist;
 }
 
-vector<Move> Board::generate_captures() {
+void Board::generate_captures(vector<Move> &movelist) const {
     
     // pawn promotions are considered capture as they change the material balance
 
-    vector<Move> movelist;
+    movelist.clear();
+    movelist.reserve(256);
+
     U64 bitboard;
     U64 attacks;
     int from_square;
@@ -638,8 +651,6 @@ vector<Move> Board::generate_captures() {
             }
         }
     }
-
-    return movelist;
 }
 
 bool Board::make(Move move) {
@@ -836,13 +847,12 @@ bool Board::is_repetition() {
     return count(hash_history.begin() + move_count[1], hash_history.end(), hash_history.back()) >= 2;
 }
 
-vector<Move> Board::generate_legal_moves() {
+vector<Move> Board::generate_legal_moves() const {
 
     vector<Move> moves;
-
-    for (const Move move : generate_moves()) {
-        if (make(move)) {
-            unmake();
+    for (const Move &move : generate_moves()) {
+        if (const_cast<Board*>(this)->make(move)) {
+            const_cast<Board*>(this)->unmake();
             moves.push_back(move);
         }
     }
@@ -856,7 +866,7 @@ bool Board::make_str_move(string str_move) {
         c = std::tolower(static_cast<unsigned char>(c));
     }
 
-    for (const Move move : generate_moves()) {
+    for (const Move &move : generate_moves()) {
         if (str_move == move.to_string()) {
             return make(move);
         }

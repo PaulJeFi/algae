@@ -7,7 +7,7 @@ Timer manage(int time_, Board &board, int inc, int movestogo) {
     Timer timer;
 
     int overhead;
-    int ply = board.move_stack.size();
+    int ply = board.move_stack.count;
 
     if (movestogo == 0) {
         movestogo = 20;
@@ -41,7 +41,7 @@ Timer manage(int time_, Board &board, int inc, int movestogo) {
     /* Classical time management (unused)
     int Y = movestogo;
     if (Y == 0) {
-        Y = max(10, 40 - (int)(board.move_stack.size()/2));
+        Y = max(10, 40 - (int)(board.move_stack.count/2));
     }
     // return (int)floor(clamp(time_/20 + 2*inc, 0, time_/4));
     // return (int)floor(clamp(time_/Y + inc * Y/10, 0, time_/4));

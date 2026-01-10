@@ -138,7 +138,7 @@ const uint8_t BOUND_LOWER = 1; // alpha
 const uint8_t BOUND_UPPER  = 2; // beta
 
 const int VALUE_MATE = 32000;
-const int MAX_PLY = 256;
+const int MAX_PLY = 50;
 
 const int VALUE_MATE_IN_MAX_PLY  = VALUE_MATE - MAX_PLY;
 const int VALUE_MATED_IN_MAX_PLY = -VALUE_MATE_IN_MAX_PLY;
@@ -158,7 +158,7 @@ static inline int mated_in(int ply) {
 const int MAX_HISTORY = 1000;
 const int MAX_MOVES = 256;
 
-const int MVV_LVA[12][12] = {
+const uint16_t MVV_LVA[12][12] = {
     // Victim     P    N    B    R    Q    K    P    N    B    R    Q    K  / Attacker
                 {105, 205, 305, 405, 505, 605, 105, 205, 305, 405, 505, 605}, //   P
                 {104, 204, 304, 404, 504, 604, 104, 204, 304, 404, 504, 604}, //   N

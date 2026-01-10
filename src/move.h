@@ -36,3 +36,8 @@ class Move {
 };
 
 const Move nullmove;
+
+struct MoveList {
+    Move moves[MAX_MOVES];
+    int count = 0;
+};

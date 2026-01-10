@@ -50,7 +50,6 @@ Board::Board(string fen) : board{None} {
 
     // Avoid frequent reallocations during search
     state_history.reserve(MAX_PLY);
-    move_stack.reserve(MAX_PLY);
     hash_history.reserve(MAX_PLY);
 
     vector<string> splitted_fen = split(fen);
@@ -72,7 +71,7 @@ Board::Board(string fen) : board{None} {
     if (splitted_fen[3] == "-") {
         en_passant = no_sq;  // No en-passant allowed
     } else {
-        for (int i = 0; i < 64; ++i) {
+        for (int i = 0; i < 64; i++) {
             if (SQUARES_NAMES[i] == splitted_fen[3]) {
                 en_passant = i;
                 break;
@@ -188,16 +187,15 @@ bool Board::is_square_attacked(uint8_t square, uint8_t by_side) const {
     return false;
 }
 
-vector<Move> Board::generate_moves() const {
-    vector<Move> movelist;
+MoveList Board::generate_moves() const {
+    MoveList movelist;
     generate_moves(movelist);
     return movelist;
 }
 
-void Board::generate_moves(vector<Move> &movelist) const {
+void Board::generate_moves(MoveList &movelist) const {
 
-    movelist.clear();
-    movelist.reserve(MAX_MOVES);
+    movelist.count = 0;
 
     U64 bitboard;
     U64 attacks;
@@ -217,14 +215,14 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = from_square + 8;
                     if (!contains_square(occupancy[BOTH], to_square)) {
                         if ((to_square >= A8) && (to_square <= H8)) { // pawn promotion
-                            movelist.push_back(Move(from_square, to_square, None, WQUEEN));
-                            movelist.push_back(Move(from_square, to_square, None, WROOK));
-                            movelist.push_back(Move(from_square, to_square, None, WBISHOP));
-                            movelist.push_back(Move(from_square, to_square, None, WKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WKNIGHT);
                         } else { // pawn push
-                            movelist.push_back(Move(from_square, to_square)); // single push
+                            movelist.moves[movelist.count++] = Move(from_square, to_square); // single push
                             if ((from_square >= A2) && (from_square <= H2) && !contains_square(occupancy[BOTH], to_square+8)) {
-                                movelist.push_back(Move(from_square, to_square+8)); // double push
+                                movelist.moves[movelist.count++] = Move(from_square, to_square+8); // double push
                             }
                         }
                     }
@@ -234,12 +232,12 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     while (attacks) {
                         to_square = ls1b_index(attacks);
                         if ((to_square >= A8) && (to_square <= H8)) { // capture promotion
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WQUEEN));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WROOK));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WBISHOP));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WKNIGHT);
                         } else { // normal capture
-                            movelist.push_back(Move(from_square, to_square, board[to_square]));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
                         attacks = remove_square(attacks, to_square);
                     }
@@ -248,7 +246,7 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     if (en_passant != no_sq) {
                         attacks = PAWN_ATTACKS[WHITE][from_square] & (1ULL << en_passant);
                         if (attacks) { 
-                            movelist.push_back(Move(from_square, en_passant, BPAWN, None, true));
+                            movelist.moves[movelist.count++] = Move(from_square, en_passant, BPAWN, None, true);
                         }
                     }
 
@@ -256,16 +254,16 @@ void Board::generate_moves(vector<Move> &movelist) const {
                 }
             } else if (piece == WKING) { // castling move
                 if (castle & WK) { // kingside
-                    if (!contains_square(occupancy[BOTH], F1) && !contains_square(occupancy[BOTH], G1)) {
+                        if (!contains_square(occupancy[BOTH], F1) && !contains_square(occupancy[BOTH], G1)) {
                         if (!is_square_attacked(E1, BLACK) && ! is_square_attacked(F1, BLACK)) {
-                            movelist.push_back(Move(E1, G1));
+                            movelist.moves[movelist.count++] = Move(E1, G1);
                         }
                     }
                 }
                 if (castle & WQ) { // queenside
-                    if (!contains_square(occupancy[BOTH], B1) && !contains_square(occupancy[BOTH], C1) && !contains_square(occupancy[BOTH], D1)) {
+                        if (!contains_square(occupancy[BOTH], B1) && !contains_square(occupancy[BOTH], C1) && !contains_square(occupancy[BOTH], D1)) {
                         if (!is_square_attacked(E1, BLACK) && ! is_square_attacked(D1, BLACK)) {
-                            movelist.push_back(Move(E1, C1));
+                            movelist.moves[movelist.count++] = Move(E1, C1);
                         }
                     }
                 }
@@ -281,14 +279,14 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = from_square - 8;
                     if (!contains_square(occupancy[BOTH], to_square)) {
                         if ((to_square >= A1) && (to_square <= H1)) { // pawn promotion
-                            movelist.push_back(Move(from_square, to_square, None, BQUEEN));
-                            movelist.push_back(Move(from_square, to_square, None, BROOK));
-                            movelist.push_back(Move(from_square, to_square, None, BBISHOP));
-                            movelist.push_back(Move(from_square, to_square, None, BKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, BQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, BROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, BBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, BKNIGHT);
                         } else { // pawn push
-                            movelist.push_back(Move(from_square, to_square)); // single push
+                            movelist.moves[movelist.count++] = Move(from_square, to_square); // single push
                             if ((from_square >= A7) && (from_square <= H7) && !contains_square(occupancy[BOTH], to_square-8)) {
-                                movelist.push_back(Move(from_square, to_square-8)); // double push
+                                movelist.moves[movelist.count++] = Move(from_square, to_square-8); // double push
                             }
                         }
                     }
@@ -298,12 +296,12 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     while (attacks) {
                         to_square = ls1b_index(attacks);
                         if ((to_square >= A1) && (to_square <= H1)) { // capture promotion
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BQUEEN));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BROOK));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BBISHOP));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BKNIGHT);
                         } else { // normal capture
-                            movelist.push_back(Move(from_square, to_square, board[to_square]));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
                         attacks = remove_square(attacks, to_square);
                     }
@@ -312,7 +310,7 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     if (en_passant != no_sq) {
                         attacks = PAWN_ATTACKS[BLACK][from_square] & (1ULL << en_passant);
                         if (attacks) { 
-                            movelist.push_back(Move(from_square, en_passant, WPAWN, None, true));
+                            movelist.moves[movelist.count++] = Move(from_square, en_passant, WPAWN, None, true);
                         }
                     }
 
@@ -322,14 +320,14 @@ void Board::generate_moves(vector<Move> &movelist) const {
                 if (castle & BK) { // kingside
                     if (!contains_square(occupancy[BOTH], F8) && !contains_square(occupancy[BOTH], G8)) {
                         if (!is_square_attacked(E8, WHITE) && !is_square_attacked(F8, WHITE)) {
-                            movelist.push_back(Move(E8, G8));
+                            movelist.moves[movelist.count++] = Move(E8, G8);
                         }
                     }
                 }
                 if (castle & BQ) { // queenside
                     if (!contains_square(occupancy[BOTH], B8) && !contains_square(occupancy[BOTH], C8) && !contains_square(occupancy[BOTH], D8)) {
                         if (!is_square_attacked(E8, WHITE) && ! is_square_attacked(D8, WHITE)) {
-                            movelist.push_back(Move(E8, C8));
+                            movelist.moves[movelist.count++] = Move(E8, C8);
                         }
                     }
                 }
@@ -346,9 +344,9 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     } else { // quiet move
-                        movelist.push_back(Move(from_square, to_square));
+                        movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -368,9 +366,9 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     } else { // quiet move
-                        movelist.push_back(Move(from_square, to_square));
+                        movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -390,9 +388,9 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     } else { // quiet move
-                        movelist.push_back(Move(from_square, to_square));
+                        movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -412,9 +410,9 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     } else { // quiet move
-                        movelist.push_back(Move(from_square, to_square));
+                        movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -434,9 +432,9 @@ void Board::generate_moves(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     } else { // quiet move
-                        movelist.push_back(Move(from_square, to_square));
+                        movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -448,12 +446,11 @@ void Board::generate_moves(vector<Move> &movelist) const {
     }
 }
 
-void Board::generate_captures(vector<Move> &movelist) const {
+void Board::generate_captures(MoveList &movelist) const {
     
     // pawn promotions are considered capture as they change the material balance
 
-    movelist.clear();
-    movelist.reserve(256);
+    movelist.count = 0;
 
     U64 bitboard;
     U64 attacks;
@@ -473,10 +470,10 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     to_square = from_square + 8;
                     if (!contains_square(occupancy[BOTH], to_square)) {
                         if ((to_square >= A8) && (to_square <= H8)) { // pawn promotion
-                            movelist.push_back(Move(from_square, to_square, None, WQUEEN));
-                            movelist.push_back(Move(from_square, to_square, None, WROOK));
-                            movelist.push_back(Move(from_square, to_square, None, WBISHOP));
-                            movelist.push_back(Move(from_square, to_square, None, WKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, None, WKNIGHT);
                         }
                     }
 
@@ -485,12 +482,12 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     while (attacks) {
                         to_square = ls1b_index(attacks);
                         if ((to_square >= A8) && (to_square <= H8)) { // capture promotion
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WQUEEN));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WROOK));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WBISHOP));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], WKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], WKNIGHT);
                         } else { // normal capture
-                            movelist.push_back(Move(from_square, to_square, board[to_square]));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
                         attacks = remove_square(attacks, to_square);
                     }
@@ -499,7 +496,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     if (en_passant != no_sq) {
                         attacks = PAWN_ATTACKS[WHITE][from_square] & (1ULL << en_passant);
                         if (attacks) { 
-                            movelist.push_back(Move(from_square, en_passant, BPAWN, None, true));
+                            movelist.moves[movelist.count++] = Move(from_square, en_passant, BPAWN, None, true);
                         }
                     }
 
@@ -516,12 +513,12 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     // quiet moves
                     to_square = from_square - 8;
                     if (!contains_square(occupancy[BOTH], to_square)) {
-                        if ((to_square >= A1) && (to_square <= H1)) { // pawn promotion
-                            movelist.push_back(Move(from_square, to_square, None, BQUEEN));
-                            movelist.push_back(Move(from_square, to_square, None, BROOK));
-                            movelist.push_back(Move(from_square, to_square, None, BBISHOP));
-                            movelist.push_back(Move(from_square, to_square, None, BKNIGHT));
-                        }
+                                if ((to_square >= A1) && (to_square <= H1)) { // pawn promotion
+                                movelist.moves[movelist.count++] = Move(from_square, to_square, None, BQUEEN);
+                                movelist.moves[movelist.count++] = Move(from_square, to_square, None, BROOK);
+                                movelist.moves[movelist.count++] = Move(from_square, to_square, None, BBISHOP);
+                                movelist.moves[movelist.count++] = Move(from_square, to_square, None, BKNIGHT);
+                            }
                     }
 
                     // capture moves
@@ -529,12 +526,12 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     while (attacks) {
                         to_square = ls1b_index(attacks);
                         if ((to_square >= A1) && (to_square <= H1)) { // capture promotion
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BQUEEN));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BROOK));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BBISHOP));
-                            movelist.push_back(Move(from_square, to_square, board[to_square], BKNIGHT));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BQUEEN);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BROOK);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BBISHOP);
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square], BKNIGHT);
                         } else { // normal capture
-                            movelist.push_back(Move(from_square, to_square, board[to_square]));
+                            movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
                         attacks = remove_square(attacks, to_square);
                     }
@@ -543,7 +540,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     if (en_passant != no_sq) {
                         attacks = PAWN_ATTACKS[BLACK][from_square] & (1ULL << en_passant);
                         if (attacks) { 
-                            movelist.push_back(Move(from_square, en_passant, WPAWN, None, true));
+                            movelist.moves[movelist.count++] = Move(from_square, en_passant, WPAWN, None, true);
                         }
                     }
 
@@ -562,7 +559,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
                     attacks = remove_square(attacks, to_square);
                 }
@@ -581,7 +578,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -601,7 +598,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -621,7 +618,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -641,7 +638,7 @@ void Board::generate_captures(vector<Move> &movelist) const {
                     to_square = ls1b_index(attacks);
 
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
-                        movelist.push_back(Move(from_square, to_square, board[to_square]));    
+                        movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
                     attacks = remove_square(attacks, to_square);
@@ -658,7 +655,7 @@ bool Board::make(Move move) {
     int8_t piece = board[move.from_sq];
 
     state_history.push_back(State(en_passant, castle, move_count));
-    move_stack.push_back(move);
+    move_stack.moves[move_stack.count++] = move;
     hash_history.push_back(hash_key);
 
     move_count[0] += 1;
@@ -751,8 +748,8 @@ bool Board::make(Move move) {
 
 void Board::unmake() {
 
-    Move move = move_stack.back();
-    move_stack.pop_back();
+    Move move = move_stack.moves[move_stack.count-1];
+    move_stack.count--;
     State state = state_history.back();
     state_history.pop_back();
     en_passant = state.en_passant;
@@ -812,7 +809,7 @@ void Board::unmake() {
 }
 
 void Board::make_null() {
-    move_stack.push_back(nullmove);
+    move_stack.moves[move_stack.count++] = nullmove;
     state_history.push_back(State(en_passant, castle, move_count));
     hash_history.push_back(hash_key);
     if (side == BLACK) {
@@ -828,7 +825,7 @@ void Board::make_null() {
 }
 
 void Board::unmake_null() {
-    move_stack.pop_back();
+    move_stack.count--;
     State state = state_history.back();
     state_history.pop_back();
     en_passant = state.en_passant;
@@ -847,13 +844,15 @@ bool Board::is_repetition() {
     return count(hash_history.begin() + move_count[1], hash_history.end(), hash_history.back()) >= 2;
 }
 
-vector<Move> Board::generate_legal_moves() const {
+MoveList Board::generate_legal_moves() const {
 
-    vector<Move> moves;
-    for (const Move &move : generate_moves()) {
+    MoveList moves;
+    MoveList all = generate_moves();
+    for (int i = 0; i < all.count; i++) {
+        const Move &move = all.moves[i];
         if (const_cast<Board*>(this)->make(move)) {
             const_cast<Board*>(this)->unmake();
-            moves.push_back(move);
+            moves.moves[moves.count++] = move;
         }
     }
 
@@ -866,9 +865,13 @@ bool Board::make_str_move(string str_move) {
         c = std::tolower(static_cast<unsigned char>(c));
     }
 
-    for (const Move &move : generate_moves()) {
-        if (str_move == move.to_string()) {
-            return make(move);
+    {
+        MoveList moves = generate_moves();
+        for (int i = 0; i < moves.count; i++) {
+            const Move &move = moves.moves[i];
+            if (str_move == move.to_string()) {
+                return make(move);
+            }
         }
     }
     return false;

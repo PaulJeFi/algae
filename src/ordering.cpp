@@ -22,6 +22,12 @@ void reset_tables() {
 }
 
 void update_killers(const Move &move, uint ply) {
+    if (ply >= MAX_PLY) {
+        return;
+    }
+    if (move.is_ep || (move.captured != None)) {
+        return; // Because capture are threated before killers when scoring moves. See score_move.
+    }
     if (killers[ply][0] == move) {
         return;
     } if (killers[ply][1] == move) {
@@ -48,40 +54,41 @@ int score_move(const Move &move, const Board &board, uint ply, const Move &best_
         return MVV_LVA[board.board[move.from_sq]][move.captured];
     }
 
-    if (killers[ply][0] == move) {
-        score += 9000;
-    } else if (killers[ply][1] == move) {
-        score += 8000;
+    if (ply < MAX_PLY) {
+        if (killers[ply][0] == move) {
+            score += 9000;
+        } else if (killers[ply][1] == move) {
+            score += 8000;
+        }
     }
-    score +=history[board.board[move.from_sq]][move.to_sq];
+    score += history[board.board[move.from_sq]][move.to_sq];
 
     return score;
 }
 
-void ordering(const Board &board, uint ply, vector<Move> &moves, const Move &best_move) {
+void ordering(const Board &board, uint ply, MoveList &moves, const Move &best_move) {
 
-    // Precompute scores to avoid recalculating in comparator frequently
-    size_t n = moves.size();
+    size_t n = (size_t)moves.count;
     if (n <= 1) {
         return;
     }
-    vector<int> scores;
-    scores.reserve(n);
+    // compute scores array
+    int scores[MAX_MOVES];
     for (size_t i = 0; i < n; ++i) {
-        scores.push_back(score_move(moves[i], board, ply, best_move));
+        scores[i] = score_move(moves.moves[i], board, ply, best_move);
     }
 
     // insertion sort
     for (size_t i = 1; i < n; ++i) {
-        Move mv = moves[i];
+        Move mv = moves.moves[i];
         int sc = scores[i];
         size_t j = i;
         while (j > 0 && scores[j-1] < sc) {
-            moves[j] = moves[j-1];
+            moves.moves[j] = moves.moves[j-1];
             scores[j] = scores[j-1];
             j--;
         }
-        moves[j] = mv;
+        moves.moves[j] = mv;
         scores[j] = sc;
     }
 }

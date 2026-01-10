@@ -14,7 +14,9 @@ uint perft(Board &board, uint depth) {
         return 1;
     }
 
-    for (const Move &move : board.generate_moves()) {
+    MoveList moves = board.generate_moves();
+    for (int i = 0; i < moves.count; i++) {
+        const Move &move = moves.moves[i];
         if (!board.make(move)) {
             continue;
         }
@@ -33,7 +35,9 @@ uint PERFT(Board &board, uint depth) {
         return 1;
     }
 
-    for (const Move &move : board.generate_moves()) {
+    MoveList moves = board.generate_moves();
+    for (int i = 0; i < moves.count; i++) {
+        const Move &move = moves.moves[i];
         if (!board.make(move)) {
             continue;
         }
@@ -91,10 +95,11 @@ int Searcher::quiesce(int alpha, int beta) {
 
     int score = alpha - 1;
     ply++;
-    std::vector<Move> &moves = moves_by_depth[ply];
+    MoveList moves;
     board.generate_captures(moves);
     ordering(board, ply, moves);
-    for (const Move &move : moves) {
+    for (int mi = 0; mi < moves.count; mi++) {
+        const Move &move = moves.moves[mi];
         if (!board.make(move)) {
             continue;
         }
@@ -193,7 +198,7 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     }
 
     // Null move pruning
-    if ((beta-alpha == 1) && !in_check && !(board.move_stack.back() == nullmove)
+    if ((beta-alpha == 1) && !in_check && (board.move_stack.count > 0 && !(board.move_stack.moves[board.move_stack.count-1] == nullmove))
     && (evalu >= beta)
     && (popcount(board.occupancy[board.side]) - popcount(board.bitboards[board.side == WHITE ? WPAWN : BPAWN]) > 1)
     && (beta > VALUE_TB_LOSS_IN_MAX_PLY) && (ply > 0)) {
@@ -219,10 +224,11 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
 
     uint legal = 0;
     ply++;
-    std::vector<Move> &moves = moves_by_depth[ply];
+    MoveList moves;
     board.generate_moves(moves);
     ordering(board, ply, moves, bestmove);
-    for (const Move &move : moves) {
+    for (int mi = 0; mi < moves.count; mi++) {
+        const Move &move = moves.moves[mi];
 
         // Late move reduction
         //* TODO : TEST
@@ -317,13 +323,14 @@ int Searcher::aspiration(int depth, int prev_eval) {
 }
 
 void Searcher::iterative_deepening(const Board &board, int depth, const Timer &timer) {
-    vector<Move> moves = board.generate_legal_moves();
+
+    MoveList moves = board.generate_legal_moves();
     Move bestmove = nullmove;
 
-    if (moves.size() == 1) {
+    if (moves.count == 1) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::cout << "info depth 1 score cp " << evaluate(board) << std::endl;
-        std::cout << "best move " << moves.back().to_string() << std::endl;
+        std::cout << "best move " << moves.moves[moves.count-1].to_string() << std::endl;
     }
 
     this->board = board;
@@ -362,15 +369,15 @@ void Searcher::iterative_deepening(const Board &board, int depth, const Timer &t
         elapsed = get_time() - start_time;
         prev_eval = evalu;
 
-        vector<Move> pv = PV();
-        if (pv.size() == 0) {
+        MoveList pv = PV();
+        if (pv.count == 0) {
             std::cout << nullmove.to_string() << std::endl;
             continue;
             //return;
         }
-        bestmove = pv.at(0);
-        if (pv.size() > 1) {
-            second_m = pv.at(1);
+        bestmove = pv.moves[0];
+        if (pv.count > 1) {
+            second_m = pv.moves[1];
         }
 
         if ((this->timeout )) {
@@ -393,9 +400,9 @@ void Searcher::iterative_deepening(const Board &board, int depth, const Timer &t
 
 }
 
-vector<Move> Searcher::PV() {
-
-    vector<Move> pv;
+MoveList Searcher::PV() {
+    
+    MoveList pv;
     Entry entry;
 
     while (true) {
@@ -407,7 +414,7 @@ vector<Move> Searcher::PV() {
                 break;
             }
 
-            pv.push_back(entry.move);
+            pv.moves[pv.count++] = entry.move;
             
             if (board.is_repetition()) {
                 break;
@@ -419,7 +426,7 @@ vector<Move> Searcher::PV() {
 
     }
 
-    for (size_t i = 0; i < pv.size(); i++) {
+    for (int i = 0; i < pv.count; i++) {
         board.unmake();
     }
 
@@ -429,15 +436,15 @@ vector<Move> Searcher::PV() {
 
 string Searcher::string_pv() {
 
-    vector<Move> pv = PV();
+    MoveList pv = PV();
 
-    if (pv.empty()) {
+    if (pv.count == 0) {
         return "";
     }
-    
-    string str_pv = pv[0].to_string();
-    for (size_t i = 1; i < pv.size(); i++) {
-        str_pv += " " + pv[i].to_string();
+
+    string str_pv = pv.moves[0].to_string();
+    for (int i = 1; i < pv.count; i++) {
+        str_pv += " " + pv.moves[i].to_string();
     }
     return str_pv;
 }

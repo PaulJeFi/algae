@@ -1,4 +1,9 @@
 int evaluate(const Board &board);
+template <uint8_t SideToMove>
+int evaluate(const Board &board);
+
+extern template int evaluate<WHITE>(const Board &board);
+extern template int evaluate<BLACK>(const Board &board);
 
 const int flip[64] = {
     A8, B8, C8, D8, E8, F8, G8, H8,

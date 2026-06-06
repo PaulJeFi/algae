@@ -3,6 +3,14 @@
 #include "board.h"
 #include "evaluation.h"
 
+int evaluate(const Board &board) {
+    if (board.side == WHITE) {
+        return evaluate<WHITE>(board);
+    } else {
+        return evaluate<BLACK>(board);
+    }
+}
+
 static inline int mop_up(const Board &board, int winner) {
 
     uint8_t wk = ls1b_index(board.bitboards[WKING]);
@@ -12,11 +20,12 @@ static inline int mop_up(const Board &board, int winner) {
 
 }
 
+template <uint8_t SideToMove>
 int evaluate(const Board &board) {
 
     // TODO : bishop and queen mobility, king safety
 
-    int8_t s2m = board.side == WHITE ? 1 : -1;
+    int8_t s2m = SideToMove == WHITE ? 1 : -1;
 
     int score = 0;
     int phase = 24;
@@ -191,7 +200,7 @@ int evaluate(const Board &board) {
 
         }
 
-        bitboard = remove_square(bitboard, square);
+        bitboard &= (bitboard - 1);
     }
 
     // Bishop pair
@@ -266,3 +275,6 @@ int evaluate(const Board &board) {
 
     return s2m * score;
 }
+
+template int evaluate<WHITE>(const Board &board);
+template int evaluate<BLACK>(const Board &board);

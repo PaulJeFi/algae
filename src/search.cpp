@@ -14,7 +14,8 @@ uint perft(Board &board, uint depth) {
         return 1;
     }
 
-    MoveList moves = board.generate_moves();
+    MoveList moves;
+    board.generate_moves(moves);
     for (int i = 0; i < moves.count; i++) {
         const Move &move = moves.moves[i];
         if (!board.make(move)) {
@@ -35,7 +36,8 @@ uint PERFT(Board &board, uint depth) {
         return 1;
     }
 
-    MoveList moves = board.generate_moves();
+    MoveList moves;
+    board.generate_moves(moves);
     for (int i = 0; i < moves.count; i++) {
         const Move &move = moves.moves[i];
         if (!board.make(move)) {
@@ -121,6 +123,8 @@ int Searcher::quiesce(int alpha, int beta) {
 }
 
 int Searcher::PVSearch(int alpha, int beta, int depth) {
+
+    _mm_prefetch((const char*)&tt.tt[board.hash_key & (tt.size - 1)], _MM_HINT_T0);
     
     nodes++;
     seldepth = max(seldepth, ply);
@@ -241,6 +245,7 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
             continue;
         }
         legal++;
+        _mm_prefetch((const char*)&tt.tt[board.hash_key & (tt.size - 1)], _MM_HINT_T0);
         if (legal == 1) {
             score = -PVSearch(-beta, -alpha, depth-1);
             bestmove = move;

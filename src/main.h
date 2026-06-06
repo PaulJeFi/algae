@@ -9,6 +9,7 @@
 #include <cmath>
 #include <sstream>
 #include <string>
+#include <immintrin.h>
 
 using namespace std;
 using std::string;
@@ -44,11 +45,11 @@ static inline uint8_t popcount(U64 x) {
 }
 
 static inline uint8_t ls1b_index(U64 b) {
-    return b ? __builtin_ctzll(b) : -1;
+    return __builtin_ctzll(b);
 }
 
-static inline bool contains_square(const U64 &bitboard, int square) {
-    return (bitboard & (1ULL << square)) != 0;
+static inline bool contains_square(const U64 bitboard, int square) {
+    return (bitboard >> square) & 1;
 }
 
 static inline U64 add_square(U64 bitboard, int square) {
@@ -57,6 +58,15 @@ static inline U64 add_square(U64 bitboard, int square) {
 
 static inline U64 remove_square(U64 bitboard, int square) {
     return bitboard & ~(1ULL << square);
+}
+
+static inline U64 pop_ls1b(U64 bitboard) {
+    
+    #if defined(__BMI2__) || defined(USE_BMI2_FORCE)
+        return _blsr_u64(bitboard);
+    #else
+        return bitboard & (bitboard - 1);
+    #endif
 }
 
 enum Square {

@@ -155,7 +155,7 @@ void Board::zobrist_key() {
         while (bitboard) {
             square = ls1b_index(bitboard);
             hash_key ^= RANDOM_ARRAY[64 * hash_piece[piece] + 8 * square_rank(square) + square_file(square)];
-            bitboard = remove_square(bitboard, square);
+            bitboard = pop_ls1b(bitboard);
         }
     }
 
@@ -170,6 +170,15 @@ void Board::zobrist_key() {
 }
 
 bool Board::is_square_attacked(uint8_t square, uint8_t by_side) const {
+    if (by_side == WHITE) {
+        return is_square_attacked<WHITE>(square);
+    } else {
+        return is_square_attacked<BLACK>(square);
+    }
+}
+
+template <uint8_t by_side>
+bool Board::is_square_attacked(uint8_t square) const {
 
     if ((by_side == WHITE) && (PAWN_ATTACKS[BLACK][square] & bitboards[WPAWN])) {
         return true;
@@ -194,6 +203,15 @@ MoveList Board::generate_moves() const {
 }
 
 void Board::generate_moves(MoveList &movelist) const {
+    if (side == WHITE) {
+        generate_moves<WHITE>(movelist);
+    } else {
+        generate_moves<BLACK>(movelist);
+    }
+}
+
+template <uint8_t SideToMove>
+void Board::generate_moves(MoveList &movelist) const {
 
     movelist.count = 0;
 
@@ -203,9 +221,9 @@ void Board::generate_moves(MoveList &movelist) const {
     uint8_t to_square;
 
     for (int8_t piece = WPAWN; piece <= BKING; piece++) {
-        bitboard = bitboards[piece] & occupancy[side];
+        bitboard = bitboards[piece] & occupancy[SideToMove];
 
-        if (side == WHITE) {
+        if constexpr (SideToMove == WHITE) {
             
             if (piece == WPAWN) {
                 while (bitboard) {
@@ -239,7 +257,7 @@ void Board::generate_moves(MoveList &movelist) const {
                         } else { // normal capture
                             movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
-                        attacks = remove_square(attacks, to_square);
+                        attacks = pop_ls1b(attacks);
                     }
 
                     // en passant
@@ -250,26 +268,26 @@ void Board::generate_moves(MoveList &movelist) const {
                         }
                     }
 
-                    bitboard = remove_square(bitboard, from_square);
+                    bitboard = pop_ls1b(bitboard);
                 }
             } else if (piece == WKING) { // castling move
                 if (castle & WK) { // kingside
                         if (!contains_square(occupancy[BOTH], F1) && !contains_square(occupancy[BOTH], G1)) {
-                        if (!is_square_attacked(E1, BLACK) && ! is_square_attacked(F1, BLACK)) {
+                        if (!is_square_attacked<BLACK>(E1) && ! is_square_attacked<BLACK>(F1)) {
                             movelist.moves[movelist.count++] = Move(E1, G1);
                         }
                     }
                 }
                 if (castle & WQ) { // queenside
                         if (!contains_square(occupancy[BOTH], B1) && !contains_square(occupancy[BOTH], C1) && !contains_square(occupancy[BOTH], D1)) {
-                        if (!is_square_attacked(E1, BLACK) && ! is_square_attacked(D1, BLACK)) {
+                        if (!is_square_attacked<BLACK>(E1) && ! is_square_attacked<BLACK>(D1)) {
                             movelist.moves[movelist.count++] = Move(E1, C1);
                         }
                     }
                 }
             }
         
-        } else if (side == BLACK) {
+        } else {
 
             if (piece == BPAWN) {
                 while (bitboard) {
@@ -303,7 +321,7 @@ void Board::generate_moves(MoveList &movelist) const {
                         } else { // normal capture
                             movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
-                        attacks = remove_square(attacks, to_square);
+                        attacks = pop_ls1b(attacks);
                     }
 
                     // en passant
@@ -314,19 +332,19 @@ void Board::generate_moves(MoveList &movelist) const {
                         }
                     }
 
-                    bitboard = remove_square(bitboard, from_square);
+                    bitboard = pop_ls1b(bitboard);
                 }
             } else if (piece == BKING) { // castling move
                 if (castle & BK) { // kingside
                     if (!contains_square(occupancy[BOTH], F8) && !contains_square(occupancy[BOTH], G8)) {
-                        if (!is_square_attacked(E8, WHITE) && !is_square_attacked(F8, WHITE)) {
+                        if (!is_square_attacked<WHITE>(E8) && !is_square_attacked<WHITE>(F8)) {
                             movelist.moves[movelist.count++] = Move(E8, G8);
                         }
                     }
                 }
                 if (castle & BQ) { // queenside
                     if (!contains_square(occupancy[BOTH], B8) && !contains_square(occupancy[BOTH], C8) && !contains_square(occupancy[BOTH], D8)) {
-                        if (!is_square_attacked(E8, WHITE) && ! is_square_attacked(D8, WHITE)) {
+                        if (!is_square_attacked<WHITE>(E8) && ! is_square_attacked<WHITE>(D8)) {
                             movelist.moves[movelist.count++] = Move(E8, C8);
                         }
                     }
@@ -335,10 +353,10 @@ void Board::generate_moves(MoveList &movelist) const {
         }
 
         // knight
-        if (((piece == WKNIGHT) && (side == WHITE)) || ((piece == BKNIGHT) && (side == BLACK))) {
+        if (((piece == WKNIGHT) && (SideToMove == WHITE)) || ((piece == BKNIGHT) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = KNIGHT_ATTACKS[from_square] & (~occupancy[side]);
+                attacks = KNIGHT_ATTACKS[from_square] & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -349,18 +367,18 @@ void Board::generate_moves(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // bishop
-        else if (((piece == WBISHOP) && (side == WHITE)) || ((piece == BBISHOP) && (side == BLACK))) {
+        else if (((piece == WBISHOP) && (SideToMove == WHITE)) || ((piece == BBISHOP) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = get_bishop_attacks(from_square, occupancy[BOTH]) & (~occupancy[side]);
+                attacks = get_bishop_attacks(from_square, occupancy[BOTH]) & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -371,18 +389,18 @@ void Board::generate_moves(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // rook
-        else if (((piece == WROOK) && (side == WHITE)) || ((piece == BROOK) && (side == BLACK))) {
+        else if (((piece == WROOK) && (SideToMove == WHITE)) || ((piece == BROOK) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = get_rook_attacks(from_square, occupancy[BOTH]) & (~occupancy[side]);
+                attacks = get_rook_attacks(from_square, occupancy[BOTH]) & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -393,18 +411,18 @@ void Board::generate_moves(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // rook
-        else if (((piece == WQUEEN) && (side == WHITE)) || ((piece == BQUEEN) && (side == BLACK))) {
+        else if (((piece == WQUEEN) && (SideToMove == WHITE)) || ((piece == BQUEEN) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = get_queen_attacks(from_square, occupancy[BOTH]) & (~occupancy[side]);
+                attacks = get_queen_attacks(from_square, occupancy[BOTH]) & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -415,18 +433,18 @@ void Board::generate_moves(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // king
-        else if (((piece == WKING) && (side == WHITE)) || ((piece == BKING) && (side == BLACK))) {
+        else if (((piece == WKING) && (SideToMove == WHITE)) || ((piece == BKING) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = KING_ATTACKS[from_square] & (~occupancy[side]);
+                attacks = KING_ATTACKS[from_square] & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -437,15 +455,24 @@ void Board::generate_moves(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square);
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
     }
 }
 
+void Board::generate_captures(MoveList &movelist) const {
+    if (side == WHITE) {
+        generate_captures<WHITE>(movelist);
+    } else {
+        generate_captures<BLACK>(movelist);
+    }
+}
+
+template <uint8_t SideToMove>
 void Board::generate_captures(MoveList &movelist) const {
     
     // pawn promotions are considered capture as they change the material balance
@@ -458,9 +485,9 @@ void Board::generate_captures(MoveList &movelist) const {
     int to_square;
 
     for (int piece = WPAWN; piece <= BKING; piece++) {
-        bitboard = bitboards[piece] & occupancy[side];
+        bitboard = bitboards[piece] & occupancy[SideToMove];
 
-        if (side == WHITE) {
+        if constexpr (SideToMove == WHITE) {
             
             if (piece == WPAWN) {
                 while (bitboard) {
@@ -489,7 +516,7 @@ void Board::generate_captures(MoveList &movelist) const {
                         } else { // normal capture
                             movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
-                        attacks = remove_square(attacks, to_square);
+                        attacks = pop_ls1b(attacks);
                     }
 
                     // en passant
@@ -500,11 +527,11 @@ void Board::generate_captures(MoveList &movelist) const {
                         }
                     }
 
-                    bitboard = remove_square(bitboard, from_square);
+                    bitboard =pop_ls1b (bitboard);
                 }
             }
         
-        } else if (side == BLACK) {
+        } else {
 
             if (piece == BPAWN) {
                 while (bitboard) {
@@ -533,7 +560,7 @@ void Board::generate_captures(MoveList &movelist) const {
                         } else { // normal capture
                             movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);
                         }
-                        attacks = remove_square(attacks, to_square);
+                        attacks = pop_ls1b(attacks);
                     }
 
                     // en passant
@@ -544,16 +571,16 @@ void Board::generate_captures(MoveList &movelist) const {
                         }
                     }
 
-                    bitboard = remove_square(bitboard, from_square);
+                    bitboard = pop_ls1b(bitboard);
                 }
             } 
         }
 
         // knight
-        if (((piece == WKNIGHT) && (side == WHITE)) || ((piece == BKNIGHT) && (side == BLACK))) {
+        if (((piece == WKNIGHT) && (SideToMove == WHITE)) || ((piece == BKNIGHT) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = KNIGHT_ATTACKS[from_square] & (~occupancy[side]);
+                attacks = KNIGHT_ATTACKS[from_square] & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -561,18 +588,18 @@ void Board::generate_captures(MoveList &movelist) const {
                     if (contains_square(occupancy[BOTH], to_square)) { // capture
                         movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // bishop
-        else if (((piece == WBISHOP) && (side == WHITE)) || ((piece == BBISHOP) && (side == BLACK))) {
+        else if (((piece == WBISHOP) && (SideToMove == WHITE)) || ((piece == BBISHOP) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = get_bishop_attacks(from_square, occupancy[BOTH]) & (~occupancy[side]);
+                attacks = get_bishop_attacks(from_square, occupancy[BOTH]) & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -581,18 +608,18 @@ void Board::generate_captures(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // rook
-        else if (((piece == WROOK) && (side == WHITE)) || ((piece == BROOK) && (side == BLACK))) {
+        else if (((piece == WROOK) && (SideToMove == WHITE)) || ((piece == BROOK) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = get_rook_attacks(from_square, occupancy[BOTH]) & (~occupancy[side]);
+                attacks = get_rook_attacks(from_square, occupancy[BOTH]) & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -601,18 +628,18 @@ void Board::generate_captures(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // rook
-        else if (((piece == WQUEEN) && (side == WHITE)) || ((piece == BQUEEN) && (side == BLACK))) {
+        else if (((piece == WQUEEN) && (SideToMove == WHITE)) || ((piece == BQUEEN) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = get_queen_attacks(from_square, occupancy[BOTH]) & (~occupancy[side]);
+                attacks = get_queen_attacks(from_square, occupancy[BOTH]) & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -621,18 +648,18 @@ void Board::generate_captures(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
 
         // king
-        else if (((piece == WKING) && (side == WHITE)) || ((piece == BKING) && (side == BLACK))) {
+        else if (((piece == WKING) && (SideToMove == WHITE)) || ((piece == BKING) && (SideToMove == BLACK))) {
             while (bitboard) {
                 from_square = ls1b_index(bitboard);
-                attacks = KING_ATTACKS[from_square] & (~occupancy[side]);
+                attacks = KING_ATTACKS[from_square] & (~occupancy[SideToMove]);
 
                 while (attacks) {
                     to_square = ls1b_index(attacks);
@@ -641,10 +668,10 @@ void Board::generate_captures(MoveList &movelist) const {
                         movelist.moves[movelist.count++] = Move(from_square, to_square, board[to_square]);    
                     }
 
-                    attacks = remove_square(attacks, to_square);
+                    attacks = pop_ls1b(attacks);
                 }
 
-                bitboard = remove_square(bitboard, from_square);
+                bitboard = pop_ls1b(bitboard);
             }
         }
     }
@@ -876,3 +903,10 @@ bool Board::make_str_move(string str_move) {
     }
     return false;
 }
+
+template void Board::generate_moves<WHITE>(MoveList &movelist) const;
+template void Board::generate_moves<BLACK>(MoveList &movelist) const;
+template void Board::generate_captures<WHITE>(MoveList &movelist) const;
+template void Board::generate_captures<BLACK>(MoveList &movelist) const;
+template bool Board::is_square_attacked<WHITE>(uint8_t square) const;
+template bool Board::is_square_attacked<BLACK>(uint8_t square) const;

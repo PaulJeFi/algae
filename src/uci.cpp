@@ -1,3 +1,6 @@
+#include <iostream>
+#include <fstream>
+
 #include "main.h"
 #include "move.h"
 #include "board.h"
@@ -272,6 +275,10 @@ void UCI() {
             std::cout << "static eval: " << evaluate(board) << std::endl;
 
         }
+    }
+    stop_flag.store(true, std::memory_order_relaxed);
+    if (search_thread.joinable()) {
+        search_thread.join();
     }
     std::cout << std::endl;
 }

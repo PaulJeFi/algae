@@ -7,7 +7,7 @@
 #include "search.h"
 
 uint perft(Board &board, uint depth) {
-    
+
     uint nodes = 0;
 
     if (depth == 0) {
@@ -75,7 +75,7 @@ int Searcher::quiesce(int alpha, int beta) {
     // Mate distance pruning
     if (ply > 0) {
         alpha = max(mated_in(ply), alpha);
-        beta  = min(mate_in(ply + 1), beta);
+        beta = min(mate_in(ply + 1), beta);
         if (alpha >= beta) {
             return alpha;
         }
@@ -122,8 +122,7 @@ int Searcher::quiesce(int alpha, int beta) {
     return alpha;
 }
 
-int Searcher::PVSearch(int alpha, int beta, int depth) {
-
+int Searcher::PVSearch(int alpha, int beta, int depth, Move excluded_move) {
     _mm_prefetch((const char*)&tt.tt[board.hash_key & (tt.size - 1)], _MM_HINT_T0);
     
     nodes++;
@@ -143,7 +142,7 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
 
     // Initialize node
     depth = min(depth, MAX_PLY-1);
-    int8_t bound = BOUND_LOWER;
+    int8_t bound = BOUND_UPPER; 
     Move bestmove = nullmove;
     bool in_check = board.is_square_attacked(ls1b_index(board.bitboards[board.side == WHITE ? WKING : BKING]), board.side^1);
 
@@ -156,9 +155,10 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
 
     // Quiescence
     if ((depth <= 0) || (ply >= MAX_PLY)) {
-        score = quiesce(alpha, beta);
-        tt.save(board, depth, BOUND_EXACT, score, ply, nullmove, timeout);
-        return score;
+        // score = quiesce(alpha, beta);
+        // tt.save(board, depth, BOUND_EXACT, score, ply, nullmove, timeout);
+        // return score;
+        return quiesce(alpha, beta);
     }
 
     // TODO : insufficient material
@@ -172,7 +172,7 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     // Mate distance pruning
     if (ply > 0) {
         alpha = max(mated_in(ply), alpha);
-        beta  = min(mate_in(ply + 1), beta);
+        beta = min(mate_in(ply + 1), beta);
         if (alpha >= beta) {
             return alpha;
         }
@@ -183,8 +183,10 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     ProbeEntry probe = tt.probe(board, depth, alpha, beta, ply);
     if (!probe.is_none()) {
         probe_suceeded = true;
-        if ((probe.value != 0.5) && (ply != 0) && (beta-alpha == 1)) {
-            return probe.value;
+        if ((probe.value != VALUE_NONE) && (ply != 0) && (beta-alpha == 1)) {
+            if (excluded_move == nullmove) {
+                return probe.value;
+            }
         }
         bestmove = probe.move;
     }
@@ -192,12 +194,12 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     int evalu = evaluate(board);
 
     // Futility pruning
-    if (!in_check && (evalu - 120*depth >= beta) && (beta-alpha == 1) && probe_suceeded) {
-        return quiesce(alpha, beta);//evalu;
+    if (!in_check && (evalu - 120*depth >= beta) && (beta-alpha == 1) && probe_suceeded && (excluded_move == nullmove)) {
+        return quiesce(alpha, beta);
     }
 
     // Razoring
-    if (!in_check && (depth < 3) && (evalu + 120 < alpha) && (beta-alpha == 1)) {
+    if (!in_check && (depth < 3) && (evalu + 120 < alpha) && (beta-alpha == 1) && (excluded_move == nullmove)) {
         return quiesce(alpha, beta);
     }
 
@@ -205,9 +207,9 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     if ((beta-alpha == 1) && !in_check && (board.move_stack.count > 0 && !(board.move_stack.moves[board.move_stack.count-1] == nullmove))
     && (evalu >= beta)
     && (popcount(board.occupancy[board.side]) - popcount(board.bitboards[board.side == WHITE ? WPAWN : BPAWN]) > 1)
-    && (beta > VALUE_TB_LOSS_IN_MAX_PLY) && (ply > 0)) {
+    && (beta > VALUE_TB_LOSS_IN_MAX_PLY) && (ply > 0)
+    && (excluded_move == nullmove)) { 
         
-
         int R = 3;
         ply += 1;
         board.make_null();
@@ -222,8 +224,20 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     }
 
     // Internal iterative reduction
-    if (!probe_suceeded && (beta-alpha == 1) && (depth > 5) && (ply > 0)) {
+    if (!probe_suceeded && (beta-alpha == 1) && (depth > 5) && (ply > 0) && (excluded_move == nullmove)) {
         depth -= 3;
+    }
+
+    // Singular extension
+    int singular = 0;
+    if ((excluded_move == nullmove) && (depth >= 8) && !(bestmove == nullmove) && probe_suceeded) {
+        if (abs(probe.value) < VALUE_MATE - 100) {
+            int rBeta = probe.value - 32;
+            int rDepth = (depth - 1) / 2;
+            if (PVSearch(rBeta - 1, rBeta, rDepth, bestmove) < rBeta) {
+                singular = 1;
+            }
+        }
     }
 
     uint legal = 0;
@@ -234,31 +248,38 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
     for (int mi = 0; mi < moves.count; mi++) {
         const Move &move = moves.moves[mi];
 
+        if (move == excluded_move) {
+            continue;    
+        }
+        
+        if (!board.make(move)) {
+            continue;
+        }
+        legal++;
+
         // Late move reduction
-        //* TODO : TEST
+        /* TODO : TEST
         if ((depth > 3) && (beta-alpha == 1) && (move.captured == None) && (legal == 7)) {
             depth -= 3;
         }
         //*/
 
-        if (!board.make(move)) {
-            continue;
-        }
-        legal++;
         _mm_prefetch((const char*)&tt.tt[board.hash_key & (tt.size - 1)], _MM_HINT_T0);
+        
         if (legal == 1) {
-            score = -PVSearch(-beta, -alpha, depth-1);
+            score = -PVSearch(-beta, -alpha, depth - 1 + singular);
             bestmove = move;
         } else {
-            score = -PVSearch(-alpha-1, -alpha, depth-1);
+            score = -PVSearch(-alpha-1, -alpha, depth - 1);
             if ((score > alpha) && (beta - alpha > 1)) {
-                score = -PVSearch(-beta, -alpha, depth-1); // beta-alpha > 1 : PV node -> re-search
+                score = -PVSearch(-beta, -alpha, depth - 1); // beta-alpha > 1 : PV node -> re-search
             }
         }
         board.unmake();
+        
         if (score >= beta) {
             alpha = beta;
-            bound = BOUND_UPPER;
+            bound = BOUND_LOWER; 
             bestmove = move;
 
             if (move.captured == None) {
@@ -277,16 +298,20 @@ int Searcher::PVSearch(int alpha, int beta, int depth) {
 
     ply--;
     
+
     // Stalemate and checkmate detection
     if (legal == 0) {
         if (in_check) {
-            alpha = -VALUE_MATE;
+            alpha = -VALUE_MATE + ply;
         } else {
             alpha = 0;
         }
+        bound = BOUND_EXACT;
     }
 
-    tt.save(board, depth, bound, alpha, ply, bestmove, timeout);
+    if (excluded_move == nullmove) {
+        tt.save(board, depth, bound, alpha, ply, bestmove, timeout);
+    }
     return alpha;
 }
 
@@ -298,7 +323,7 @@ int Searcher::aspiration(int depth, int prev_eval) {
     int score = 0;
 
     while (true) {
-
+    
         if (alpha < -3500) {
             alpha = -VALUE_MATE;
         }
@@ -365,7 +390,7 @@ void Searcher::iterative_deepening(const Board &board, int depth, const Timer &t
         this->timeout = false;
         this->seldepth = 0;
 
-        if (false) {//(currdepth >= 5) {
+        if (false) { //(currdepth >= 5) {
             evalu = aspiration(currdepth, prev_eval);
         } else {
             evalu = PVSearch(-VALUE_MATE, VALUE_MATE, currdepth);
@@ -378,14 +403,13 @@ void Searcher::iterative_deepening(const Board &board, int depth, const Timer &t
         if (pv.count == 0) {
             std::cout << nullmove.to_string() << std::endl;
             continue;
-            //return;
         }
         bestmove = pv.moves[0];
         if (pv.count > 1) {
             second_m = pv.moves[1];
         }
 
-        if ((this->timeout )) {
+        if ((this->timeout)) {
             std::cout << "bestmove " << bestmove.to_string() << " ponder " << second_m.to_string() << std::endl;
             return;
         }
@@ -398,15 +422,13 @@ void Searcher::iterative_deepening(const Board &board, int depth, const Timer &t
             std::cout << "bestmove " << bestmove.to_string() << " ponder " << second_m.to_string() << std::endl;
             return;
         }
-
     }
 
     std::cout << "bestmove " << bestmove.to_string() << " ponder " << second_m.to_string() << std::endl;
-
 }
 
 MoveList Searcher::PV() {
-    
+
     MoveList pv;
     Entry entry;
 
@@ -424,11 +446,10 @@ MoveList Searcher::PV() {
             if (board.is_repetition()) {
                 break;
             }
-
+    
         } else {
             break;
         }
-
     }
 
     for (int i = 0; i < pv.count; i++) {
@@ -436,7 +457,6 @@ MoveList Searcher::PV() {
     }
 
     return pv;
-
 }
 
 string Searcher::string_pv() {

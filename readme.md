@@ -28,6 +28,7 @@ Algae is a UCI chess engine written in C++.
     - [iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
     - [mate distance pruning](https://www.chessprogramming.org/Mate_Distance_Pruning)
     - [check extensions](https://www.chessprogramming.org/Check_Extensions) (check-evaders for the moment)
+    - [singular extension](https://www.chessprogramming.org/Singular_Extensions)
     - [Quiescence Search](https://www.chessprogramming.org/Quiescence_Search)
         - [delta pruning](https://www.chessprogramming.org/Delta_Pruning)
     - [Move Orderning](https://www.chessprogramming.org/Move_Ordering)

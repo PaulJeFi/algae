@@ -20,7 +20,7 @@ class Searcher {
         long long start_time_ = 0;
 
         int quiesce(int alpha, int beta);
-        int PVSearch(int alpha, int beta, int depth);
+        int PVSearch(int alpha, int beta, int depth, Move excluded_move = nullmove);
         int aspiration(int depth, int prev_eval);
         void iterative_deepening(const Board &board, int depth, const Timer &timer);
         MoveList PV();

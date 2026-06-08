@@ -1,3 +1,5 @@
+constexpr int VALUE_NONE = 32000;
+
 struct Entry {
     U64 key;
     uint depth;
@@ -9,8 +11,8 @@ struct Entry {
 
 struct ProbeEntry {
     Move move;
-    double value;
-    ProbeEntry(const Move &move=nullmove, double value=0.5);
+    int value;
+    ProbeEntry(const Move &move=nullmove, int value = VALUE_NONE);
     bool is_none();
 };
 
@@ -18,7 +20,7 @@ class TT {
 
     public :
 
-        static inline const int size = 5 * 1024 * 1024;
+        static inline const int size = 5 * 1024 * 1024 * 2;
         Entry tt[size];
 
         void clear();
